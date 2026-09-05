@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+
+# Testing & Cache
+.pytest_cache/
+.spark_temp/
+
+# Big Data files (Exceeds GitHub 100MB limit)
+data/orders_huge_mixed_quality.csv
+data/sample_300mb.csv
+data/sample_40mb.csv
+
+# Temporary files
+*.tmp
+reports/screenshots/crop_*.png
+reports/screenshots/temp_*.png
