@@ -214,21 +214,32 @@ def refresh_top_products_summary(
         }
 
     # Step 2: Determine affected SKUs
-    if watermark and not force_full:
-        # Find distinct affected SKUs in the delta records
+    incremental_mode = bool(watermark and not force_full)
+
+    if incremental_mode:
+        # Identify the SKUs touched by the delta records.
         affected_skus = coll_val.distinct("items.sku", match_stage)
-        aggregation_filter = {
-            "items.sku": {"$in": affected_skus},
-        }
+        if not affected_skus:
+            return {
+                "view_name": MV_TOP_PRODUCTS,
+                "mode": "INCREMENTAL",
+                "status": "UP_TO_DATE",
+                "records_processed": 0,
+                "affected_buckets": 0,
+                "watermark": watermark,
+            }
+        aggregation_filter = {"items.sku": {"$in": affected_skus}}
+        item_filter = {"items.sku": {"$in": affected_skus}}
     else:
         # Full initial or forced build
         aggregation_filter = {"items.sku": {"$ne": None}}
+        item_filter = {"items.sku": {"$ne": None}}
 
     # Step 3: Run targeted aggregation pipeline
     pipeline = [
         {"$match": aggregation_filter},
         {"$unwind": "$items"},
-        {"$match": {"items.sku": {"$ne": None}}},
+        {"$match": item_filter},
         {
             "$group": {
                 "_id": {
