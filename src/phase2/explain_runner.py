@@ -102,6 +102,7 @@ def _build_explain_queries(coll: Any) -> List[Dict[str, Any]]:
             },
             "sort": None,
             "target_index": "idx_city_payment_status (Compound: city + payment_status)",
+            "index_name": "idx_city_payment_status",
             "why_chosen": "Matches two equality predicates in one compound B-tree index.",
             "expected_impact": "Reduces collection scanning by using the targeted compound index.",
             "live_parameters": {
@@ -116,6 +117,7 @@ def _build_explain_queries(coll: Any) -> List[Dict[str, Any]]:
             "filter": {"total_amount": {"$gte": float(median_doc["total_amount"])}},
             "sort": [("total_amount", DESCENDING)],
             "target_index": "idx_total_amount_desc (Single: total_amount DESC)",
+            "index_name": "idx_total_amount_desc",
             "why_chosen": "Supports the amount range predicate and descending sort.",
             "expected_impact": "Reduces scanning and removes the need for a separate in-memory sort.",
             "live_parameters": {"min_amount": float(median_doc["total_amount"])},
@@ -132,6 +134,7 @@ def _build_explain_queries(coll: Any) -> List[Dict[str, Any]]:
             },
             "sort": [("order_date", ASCENDING)],
             "target_index": "idx_order_date (Single: order_date ASC)",
+            "index_name": "idx_order_date",
             "why_chosen": "Matches the bounded temporal range and chronological sort.",
             "expected_impact": "Limits the index scan to the requested time window.",
             "live_parameters": {
@@ -146,6 +149,7 @@ def _explain_find(
     coll: Any,
     query_filter: Dict[str, Any],
     sort: Optional[List[Any]] = None,
+    hint: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run MongoDB Explain with explicit executionStats verbosity."""
     find_spec: Dict[str, Any] = {
@@ -154,6 +158,8 @@ def _explain_find(
     }
     if sort:
         find_spec["sort"] = dict(sort)
+    if hint:
+        find_spec["hint"] = hint
 
     return coll.database.command(
         {
@@ -196,7 +202,7 @@ def run_explain_benchmark(db: Optional[Database] = None) -> Dict[str, Any]:
         cur = coll.find(q["filter"])
         if q["sort"]:
             cur = cur.sort(q["sort"])
-        raw = _explain_find(coll, q["filter"], q["sort"])
+        raw = _explain_find(coll, q["filter"], q["sort"], hint=q["index_name"])
         after_results[q["id"]] = extract_explain_stats(raw)
 
     # Step 4: Compile comprehensive comparison
