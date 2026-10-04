@@ -50,6 +50,119 @@ def extract_explain_stats(raw_explain: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _build_explain_queries(coll: Any) -> List[Dict[str, Any]]:
+    """Build benchmark predicates from real validated data, not training constants."""
+    city_status = coll.find_one(
+        {
+            "city": {"$exists": True, "$nin": [None, ""]},
+            "payment_status": {"$exists": True, "$nin": [None, ""]},
+        },
+        {"city": 1, "payment_status": 1},
+    )
+    if not city_status:
+        raise RuntimeError(
+            f"No usable city/payment_status values found in '{VALIDATED_COLLECTION}'."
+        )
+
+    numeric_count = coll.count_documents({"total_amount": {"$type": "number"}})
+    if numeric_count == 0:
+        raise RuntimeError(
+            f"No numeric total_amount values found in '{VALIDATED_COLLECTION}'."
+        )
+
+    median_cursor = (
+        coll.find({"total_amount": {"$type": "number"}}, {"total_amount": 1})
+        .sort("total_amount", ASCENDING)
+        .skip(max(0, numeric_count // 2))
+        .limit(1)
+    )
+    median_doc = next(iter(median_cursor), None)
+    if not median_doc:
+        raise RuntimeError("Could not select a live total_amount threshold.")
+
+    date_doc = coll.find_one(
+        {"order_date": {"$type": "string", "$gte": "2000"}},
+        {"order_date": 1},
+        sort=[("order_date", ASCENDING)],
+    )
+    if not date_doc or not isinstance(date_doc.get("order_date"), str):
+        raise RuntimeError(
+            f"No usable string order_date values found in '{VALIDATED_COLLECTION}'."
+        )
+
+    day = date_doc["order_date"][:10]
+    return [
+        {
+            "id": "query_1_city_payment_status",
+            "name": "Query 1: orders_by_city_status",
+            "description": "City + payment status filter selected from live data.",
+            "filter": {
+                "city": city_status["city"],
+                "payment_status": city_status["payment_status"],
+            },
+            "sort": None,
+            "target_index": "idx_city_payment_status (Compound: city + payment_status)",
+            "why_chosen": "Matches two equality predicates in one compound B-tree index.",
+            "expected_impact": "Reduces collection scanning by using the targeted compound index.",
+            "live_parameters": {
+                "city": city_status["city"],
+                "payment_status": city_status["payment_status"],
+            },
+        },
+        {
+            "id": "query_2_high_value_orders",
+            "name": "Query 2: high_value_orders",
+            "description": "Amount threshold + descending sort selected from live data.",
+            "filter": {"total_amount": {"$gte": float(median_doc["total_amount"])}},
+            "sort": [("total_amount", DESCENDING)],
+            "target_index": "idx_total_amount_desc (Single: total_amount DESC)",
+            "why_chosen": "Supports the amount range predicate and descending sort.",
+            "expected_impact": "Reduces scanning and removes the need for a separate in-memory sort.",
+            "live_parameters": {"min_amount": float(median_doc["total_amount"])},
+        },
+        {
+            "id": "query_3_orders_by_date_range",
+            "name": "Query 3: orders_by_date_range",
+            "description": "One-day temporal range selected from a real order date.",
+            "filter": {
+                "order_date": {
+                    "$gte": f"{day}T00:00:00",
+                    "$lte": f"{day}T23:59:59",
+                }
+            },
+            "sort": [("order_date", ASCENDING)],
+            "target_index": "idx_order_date (Single: order_date ASC)",
+            "why_chosen": "Matches the bounded temporal range and chronological sort.",
+            "expected_impact": "Limits the index scan to the requested time window.",
+            "live_parameters": {
+                "start_date": f"{day}T00:00:00",
+                "end_date": f"{day}T23:59:59",
+            },
+        },
+    ]
+
+
+def _explain_find(
+    coll: Any,
+    query_filter: Dict[str, Any],
+    sort: Optional[List[Any]] = None,
+) -> Dict[str, Any]:
+    """Run MongoDB Explain with explicit executionStats verbosity."""
+    find_spec: Dict[str, Any] = {
+        "find": coll.name,
+        "filter": query_filter,
+    }
+    if sort:
+        find_spec["sort"] = dict(sort)
+
+    return coll.database.command(
+        {
+            "explain": find_spec,
+            "verbosity": "executionStats",
+        }
+    )
+
+
 def run_explain_benchmark(db: Optional[Database] = None) -> Dict[str, Any]:
     """
     Executes explain('executionStats') on 3 core queries before and after creating indexes.
@@ -58,38 +171,7 @@ def run_explain_benchmark(db: Optional[Database] = None) -> Dict[str, Any]:
     db_inst = get_db(db)
     coll = db_inst[VALIDATED_COLLECTION]
 
-    queries_to_benchmark = [
-        {
-            "id": "query_1_city_payment_status",
-            "name": "Query 1: orders_by_city_status",
-            "description": "استعلام الطلبات حسب المدينة وحالة الدفع (صنعاء + مؤكد)",
-            "filter": {"city": "صنعاء", "payment_status": "مؤكد"},
-            "sort": None,
-            "target_index": "idx_city_payment_status (Compound: city + payment_status)",
-            "why_chosen": "تم اختيار الفهرس المركب (Compound Index) لدمج حقلي التصفية المتزامنين في فهرس B-Tree واحد، مما يمنع فحص وثائق المدن أو الحالات الأخرى تماماً ويلغي الحاجة لأي تقاطع في الذاكرة.",
-            "expected_impact": "انخفاض هائل في عدد الوثائق المفحوصة (totalDocsExamined) من مسح كامل للمجموعة (COLLSCAN) إلى الفحص المباشر للوثائق المطابقة فقط (IXSCAN)، مع تقليص وقت التنفيذ إلى أجزاء من الملي ثانية.",
-        },
-        {
-            "id": "query_2_high_value_orders",
-            "name": "Query 2: high_value_orders",
-            "description": "استعلام الطلبات عالية القيمة (الإجمالي >= 500,000 ريال) مرتبة تنازلياً",
-            "filter": {"total_amount": {"$gte": 500000.0}},
-            "sort": [("total_amount", DESCENDING)],
-            "target_index": "idx_total_amount_desc (Single: total_amount DESC)",
-            "why_chosen": "تم اختيار الفهرس على المبلغ الإجمالي بترتيب تنازلي لخدمة شرط المقارنة (Range Filter) والترتيب (Sort) معاً، بحيث تقرأ النتائج مفروزة مسبقاً دون استهلاك ذاكرة الترتيب في RAM.",
-            "expected_impact": "إلغاء مرحلة الترتيب في الذاكرة (SORT stage) والتحول من فحص كل الوثائق إلى مسح نطاق الفهرس مباشرة (IXSCAN + FETCH).",
-        },
-        {
-            "id": "query_3_orders_by_date_range",
-            "name": "Query 3: orders_by_date_range",
-            "description": "استعلام الطلبات لفترة أسبوع محدد مرتبة زمنياً تصاعدياً",
-            "filter": {"order_date": {"$gte": "2025-01-01T00:00:00", "$lte": "2025-01-07T23:59:59"}},
-            "sort": [("order_date", ASCENDING)],
-            "target_index": "idx_order_date (Single: order_date ASC)",
-            "why_chosen": "تم اختيار فهرس التاريخ لتسريع استعلامات الفترات الزمنية (Time-series / Window Queries) وقراءة التواريخ بترتيب زمني طبيعي.",
-            "expected_impact": "حصر القراءة ضمن النافذة الزمنية المحددة في شجرة B-Tree وتفادي قراءة بيانات الفترات الأخرى غير المطلوبة.",
-        },
-    ]
+    queries_to_benchmark = _build_explain_queries(coll)
 
     # Step 1: Drop Phase 2 Indexes to measure BEFORE
     print("\n[Explain Benchmark] Dropping Phase 2 indexes for Baseline measurement (BEFORE)...")
@@ -100,7 +182,7 @@ def run_explain_benchmark(db: Optional[Database] = None) -> Dict[str, Any]:
         cur = coll.find(q["filter"])
         if q["sort"]:
             cur = cur.sort(q["sort"])
-        raw = cur.explain()
+        raw = _explain_find(coll, q["filter"], q["sort"])
         before_results[q["id"]] = extract_explain_stats(raw)
 
     # Step 2: Create Phase 2 Indexes
@@ -114,7 +196,7 @@ def run_explain_benchmark(db: Optional[Database] = None) -> Dict[str, Any]:
         cur = coll.find(q["filter"])
         if q["sort"]:
             cur = cur.sort(q["sort"])
-        raw = cur.explain()
+        raw = _explain_find(coll, q["filter"], q["sort"])
         after_results[q["id"]] = extract_explain_stats(raw)
 
     # Step 4: Compile comprehensive comparison
@@ -156,6 +238,7 @@ def run_explain_benchmark(db: Optional[Database] = None) -> Dict[str, Any]:
 
     report_payload = {
         "status": "SUCCESS",
+        "explain_verbosity": "executionStats",
         "benchmark_timestamp": str(db_inst.command("serverStatus").get("localTime", "")),
         "total_queries_benchmarked": len(benchmark_data),
         "benchmarks": benchmark_data,
