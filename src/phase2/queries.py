@@ -255,7 +255,7 @@ def run_query(name: str, **kwargs: Any) -> Dict[str, Any]:
     meta = QUERIES_REGISTRY[name]
     fn = meta["function"]
 
-    db_inst = get_db()
+    db_inst = kwargs.get("db") or get_db()
     coll = db_inst[VALIDATED_COLLECTION]
     call_kwargs: Dict[str, Any] = dict(kwargs)
 
