@@ -1,0 +1,48 @@
+name: Final Project Validation
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ingest project sample through the existing midterm pipeline
+        run: |
+          python -m src.main --file data/small_sample.csv --engine python_batch --reset-db
+
+      - name: Run complete automated test suite
+        run: |
+          python -m pytest -v
+
+      - name: Run Phase 2 proof runner
+        run: |
+          python scripts/run_phase2_proofs.py
