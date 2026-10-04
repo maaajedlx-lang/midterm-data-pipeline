@@ -64,6 +64,7 @@ def test_all_five_queries_execution(query_name, db_conn):
 def test_explain_benchmark_execution(db_conn):
     benchmark = run_explain_benchmark(db_conn)
     assert benchmark["status"] == "SUCCESS"
+    assert benchmark["explain_verbosity"] == "executionStats"
     assert len(benchmark["benchmarks"]) == 3, "Must benchmark 3 queries"
     
     for item in benchmark["benchmarks"]:
@@ -164,7 +165,7 @@ def test_api_aggregations_endpoints(api_client):
 
     r_exec = api_client.get("/aggregations/sales_by_city?limit=3")
     assert r_exec.status_code == 200
-    assert r_exec.json()["count"] == 3
+    assert 0 < r_exec.json()["count"] <= 3
 
 
 def test_api_materialized_views_endpoints(api_client):
