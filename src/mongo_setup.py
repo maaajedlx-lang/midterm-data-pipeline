@@ -8,6 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from pymongo import ASCENDING, MongoClient
+from pymongo.errors import CollectionInvalid
 
 from config.settings import (
     MONGO_DATABASE,
@@ -137,21 +138,34 @@ def setup_mongodb(drop_existing: bool = False) -> None:
         # 1. RAW COLLECTION (orders_raw):
         # Must NOT have Schema Validator or Unique Index that prevents loading!
         if RAW_COLLECTION not in existing_collections:
-            db.create_collection(RAW_COLLECTION)
-            print(f"Created collection: {RAW_COLLECTION} (No Validator, No Unique Index)")
+            try:
+                db.create_collection(RAW_COLLECTION)
+                print(f"Created collection: {RAW_COLLECTION} (No Validator, No Unique Index)")
+            except CollectionInvalid:
+                print(f"Collection exists: {RAW_COLLECTION}")
         else:
             print(f"Collection exists: {RAW_COLLECTION}")
 
         # 2. VALIDATED COLLECTION (orders_validated):
         # Strict Schema Validation + Unique Index on id_order + Idempotent Upsert
         if VALIDATED_COLLECTION not in existing_collections:
-            db.create_collection(
-                VALIDATED_COLLECTION,
-                validator={"$jsonSchema": VALIDATED_SCHEMA},
-                validationLevel="strict",
-                validationAction="error",
-            )
-            print(f"Created collection: {VALIDATED_COLLECTION} (with Strict Schema Validator)")
+            try:
+                db.create_collection(
+                    VALIDATED_COLLECTION,
+                    validator={"$jsonSchema": VALIDATED_SCHEMA},
+                    validationLevel="strict",
+                    validationAction="error",
+                )
+                print(f"Created collection: {VALIDATED_COLLECTION} (with Strict Schema Validator)")
+            except CollectionInvalid:
+                db.command(
+                    "collMod",
+                    VALIDATED_COLLECTION,
+                    validator={"$jsonSchema": VALIDATED_SCHEMA},
+                    validationLevel="strict",
+                    validationAction="error",
+                )
+                print(f"Updated validator for collection: {VALIDATED_COLLECTION}")
         else:
             db.command(
                 "collMod",
@@ -165,8 +179,11 @@ def setup_mongodb(drop_existing: bool = False) -> None:
         # 3. QUARANTINE COLLECTION (quarantine_orders):
         # Must store uncorrectable records, error_codes, error_details, and raw_record
         if QUARANTINE_COLLECTION not in existing_collections:
-            db.create_collection(QUARANTINE_COLLECTION)
-            print(f"Created collection: {QUARANTINE_COLLECTION}")
+            try:
+                db.create_collection(QUARANTINE_COLLECTION)
+                print(f"Created collection: {QUARANTINE_COLLECTION}")
+            except CollectionInvalid:
+                print(f"Collection exists: {QUARANTINE_COLLECTION}")
         else:
             print(f"Collection exists: {QUARANTINE_COLLECTION}")
 

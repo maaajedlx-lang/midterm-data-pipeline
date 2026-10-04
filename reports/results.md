@@ -2,7 +2,7 @@
 ## تقرير تشغيل خط البيانات الهجين (جامعة الرازي)
 
 **Report Generated**: metrics.py
-**Total Runs Documented**: 21
+**Total Runs Documented**: 26
 
 ---
 ## Summary of Pipeline Runs
@@ -30,6 +30,11 @@
 | `b1dab2f4...` | `small_sample.csv` | 41.77 | `python_batch` | 100,000 | 68,932 | 24,850 | 6,218 | 0 | 93,782 | 0 | 27.89 | 3,585.24 | ✅ PASS |
 | `1328d721...` | `small_sample.csv` | 41.77 | `python_batch` | 100,000 | 68,932 | 24,850 | 6,218 | 93,782 | 0 | 0 | 28.77 | 3,475.72 | ✅ PASS |
 | `11e4b187...` | `small_sample.csv` | 209.20 | `pyspark` | 500,000 | 344,673 | 124,199 | 31,128 | 468,872 | 0 | 0 | 155.70 | 3,211.29 | ✅ PASS |
+| `1d22eca4...` | `small_sample.csv` | 41.77 | `python_batch` | 100,000 | 68,932 | 24,850 | 6,218 | 93,782 | 0 | 0 | 41.72 | 2,396.68 | ✅ PASS |
+| `0b9fba4b...` | `small_sample.csv` | 41.77 | `python_batch` | 100,000 | 68,932 | 24,850 | 6,218 | 0 | 93,782 | 0 | 40.12 | 2,492.23 | ✅ PASS |
+| `571648ba...` | `small_sample.csv` | 41.77 | `python_batch` | 100,000 | 68,932 | 24,850 | 6,218 | 93,782 | 0 | 0 | 41.43 | 2,413.46 | ✅ PASS |
+| `d660e6b2...` | `small_sample.csv` | 41.77 | `python_batch` | 100,000 | 68,932 | 24,850 | 6,218 | 93,782 | 0 | 0 | 41.84 | 2,389.90 | ✅ PASS |
+| `c0933202...` | `small_sample.csv` | 41.77 | `python_batch` | 100,000 | 68,932 | 24,850 | 6,218 | 0 | 93,782 | 0 | 41.14 | 2,430.57 | ✅ PASS |
 
 ---
 ## Detailed Error Taxonomy & Quarantine Breakdown
@@ -326,6 +331,76 @@
 | `DATE_IMPOSSIBLE_INVALID` | 3,488 | Isolation category |
 | `ID_ORDER_MISSING` | 3,506 | Isolation category |
 | `ID_ORDER_DUPLICATE` | 3,427 | Isolation category |
+
+
+### Run 22: `1d22eca4-490f-4ed1-a145-aa20e5960ca3` (python_batch)
+| Error Code | Occurrence Count | Description |
+| --- | --- | --- |
+| `VALUE_NEGATIVE_AMBIGUOUS` | 1,351 | Isolation category |
+| `ERRORS_CONFLICTING_MULTIPLE` | 674 | Isolation category |
+| `ID_CUSTOMER_MISSING` | 1,411 | Isolation category |
+| `JSON_ITEMS_CORRUPTED` | 1,338 | Isolation category |
+| `PRICE_UNKNOWN` | 674 | Isolation category |
+| `ID_ORDER_DUPLICATE` | 672 | Isolation category |
+| `ID_ORDER_MISSING` | 721 | Isolation category |
+| `ITEMS_EMPTY` | 677 | Isolation category |
+| `DATE_IMPOSSIBLE_INVALID` | 722 | Isolation category |
+
+
+### Run 23: `0b9fba4b-7f43-42f2-a5f9-a21943140937` (python_batch)
+| Error Code | Occurrence Count | Description |
+| --- | --- | --- |
+| `VALUE_NEGATIVE_AMBIGUOUS` | 1,351 | Isolation category |
+| `ERRORS_CONFLICTING_MULTIPLE` | 674 | Isolation category |
+| `ID_CUSTOMER_MISSING` | 1,411 | Isolation category |
+| `JSON_ITEMS_CORRUPTED` | 1,338 | Isolation category |
+| `PRICE_UNKNOWN` | 674 | Isolation category |
+| `ID_ORDER_DUPLICATE` | 672 | Isolation category |
+| `ID_ORDER_MISSING` | 721 | Isolation category |
+| `ITEMS_EMPTY` | 677 | Isolation category |
+| `DATE_IMPOSSIBLE_INVALID` | 722 | Isolation category |
+
+
+### Run 24: `571648ba-760a-474e-ac9d-f0df96d2df96` (python_batch)
+| Error Code | Occurrence Count | Description |
+| --- | --- | --- |
+| `VALUE_NEGATIVE_AMBIGUOUS` | 1,351 | Isolation category |
+| `ERRORS_CONFLICTING_MULTIPLE` | 674 | Isolation category |
+| `ID_CUSTOMER_MISSING` | 1,411 | Isolation category |
+| `JSON_ITEMS_CORRUPTED` | 1,338 | Isolation category |
+| `PRICE_UNKNOWN` | 674 | Isolation category |
+| `ID_ORDER_DUPLICATE` | 672 | Isolation category |
+| `ID_ORDER_MISSING` | 721 | Isolation category |
+| `ITEMS_EMPTY` | 677 | Isolation category |
+| `DATE_IMPOSSIBLE_INVALID` | 722 | Isolation category |
+
+
+### Run 25: `d660e6b2-ea7b-444c-9750-80365be6bdf6` (python_batch)
+| Error Code | Occurrence Count | Description |
+| --- | --- | --- |
+| `VALUE_NEGATIVE_AMBIGUOUS` | 1,351 | Isolation category |
+| `ERRORS_CONFLICTING_MULTIPLE` | 674 | Isolation category |
+| `ID_CUSTOMER_MISSING` | 1,411 | Isolation category |
+| `JSON_ITEMS_CORRUPTED` | 1,338 | Isolation category |
+| `PRICE_UNKNOWN` | 674 | Isolation category |
+| `ID_ORDER_DUPLICATE` | 672 | Isolation category |
+| `ID_ORDER_MISSING` | 721 | Isolation category |
+| `ITEMS_EMPTY` | 677 | Isolation category |
+| `DATE_IMPOSSIBLE_INVALID` | 722 | Isolation category |
+
+
+### Run 26: `c0933202-81d9-4a32-aa45-14dc64f333ca` (python_batch)
+| Error Code | Occurrence Count | Description |
+| --- | --- | --- |
+| `VALUE_NEGATIVE_AMBIGUOUS` | 1,351 | Isolation category |
+| `ERRORS_CONFLICTING_MULTIPLE` | 674 | Isolation category |
+| `ID_CUSTOMER_MISSING` | 1,411 | Isolation category |
+| `JSON_ITEMS_CORRUPTED` | 1,338 | Isolation category |
+| `PRICE_UNKNOWN` | 674 | Isolation category |
+| `ID_ORDER_DUPLICATE` | 672 | Isolation category |
+| `ID_ORDER_MISSING` | 721 | Isolation category |
+| `ITEMS_EMPTY` | 677 | Isolation category |
+| `DATE_IMPOSSIBLE_INVALID` | 722 | Isolation category |
 
 
 ---
