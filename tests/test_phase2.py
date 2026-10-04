@@ -154,7 +154,7 @@ def test_api_queries_endpoints(api_client):
     assert r_list.json()["count"] == 5
 
     r_exec = api_client.get("/queries/orders_by_city_status?city=صنعاء&payment_status=مؤكد&limit=2")
-    assert r_exec.status_code == 200
+    assert r_exec.status_code == 200, r_exec.text
     assert r_exec.json()["query_name"] == "orders_by_city_status"
 
 
