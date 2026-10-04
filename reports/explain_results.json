@@ -1,6 +1,6 @@
 {
   "status": "SUCCESS",
-  "benchmark_timestamp": "2026-10-04 18:37:55.203000",
+  "benchmark_timestamp": "2026-10-04 20:50:09.243000",
   "total_queries_benchmarked": 3,
   "benchmarks": [
     {
@@ -11,7 +11,7 @@
       "why_chosen": "تم اختيار الفهرس المركب (Compound Index) لدمج حقلي التصفية المتزامنين في فهرس B-Tree واحد، مما يمنع فحص وثائق المدن أو الحالات الأخرى تماماً ويلغي الحاجة لأي تقاطع في الذاكرة.",
       "expected_impact": "انخفاض هائل في عدد الوثائق المفحوصة (totalDocsExamined) من مسح كامل للمجموعة (COLLSCAN) إلى الفحص المباشر للوثائق المطابقة فقط (IXSCAN)، مع تقليص وقت التنفيذ إلى أجزاء من الملي ثانية.",
       "before": {
-        "execution_time_millis": 74,
+        "execution_time_millis": 79,
         "total_docs_examined": 93782,
         "total_keys_examined": 0,
         "n_returned": 1532,
@@ -19,7 +19,7 @@
         "index_used": "None (COLLSCAN)"
       },
       "after": {
-        "execution_time_millis": 11,
+        "execution_time_millis": 18,
         "total_docs_examined": 1532,
         "total_keys_examined": 1532,
         "n_returned": 1532,
@@ -29,8 +29,8 @@
       "comparison": {
         "docs_examined_saved": 92250,
         "docs_reduction_pct": 98.37,
-        "execution_time_saved_ms": 63,
-        "time_reduction_pct": 85.14
+        "execution_time_saved_ms": 61,
+        "time_reduction_pct": 77.22
       }
     },
     {
@@ -41,7 +41,7 @@
       "why_chosen": "تم اختيار الفهرس على المبلغ الإجمالي بترتيب تنازلي لخدمة شرط المقارنة (Range Filter) والترتيب (Sort) معاً، بحيث تقرأ النتائج مفروزة مسبقاً دون استهلاك ذاكرة الترتيب في RAM.",
       "expected_impact": "إلغاء مرحلة الترتيب في الذاكرة (SORT stage) والتحول من فحص كل الوثائق إلى مسح نطاق الفهرس مباشرة (IXSCAN + FETCH).",
       "before": {
-        "execution_time_millis": 253,
+        "execution_time_millis": 256,
         "total_docs_examined": 93782,
         "total_keys_examined": 0,
         "n_returned": 17722,
@@ -49,7 +49,7 @@
         "index_used": "None (COLLSCAN)"
       },
       "after": {
-        "execution_time_millis": 105,
+        "execution_time_millis": 85,
         "total_docs_examined": 17722,
         "total_keys_examined": 17722,
         "n_returned": 17722,
@@ -59,8 +59,8 @@
       "comparison": {
         "docs_examined_saved": 76060,
         "docs_reduction_pct": 81.1,
-        "execution_time_saved_ms": 148,
-        "time_reduction_pct": 58.5
+        "execution_time_saved_ms": 171,
+        "time_reduction_pct": 66.8
       }
     },
     {
@@ -71,7 +71,7 @@
       "why_chosen": "تم اختيار فهرس التاريخ لتسريع استعلامات الفترات الزمنية (Time-series / Window Queries) وقراءة التواريخ بترتيب زمني طبيعي.",
       "expected_impact": "حصر القراءة ضمن النافذة الزمنية المحددة في شجرة B-Tree وتفادي قراءة بيانات الفترات الأخرى غير المطلوبة.",
       "before": {
-        "execution_time_millis": 230,
+        "execution_time_millis": 240,
         "total_docs_examined": 93782,
         "total_keys_examined": 0,
         "n_returned": 5171,
@@ -79,7 +79,7 @@
         "index_used": "None (COLLSCAN)"
       },
       "after": {
-        "execution_time_millis": 29,
+        "execution_time_millis": 36,
         "total_docs_examined": 5171,
         "total_keys_examined": 5171,
         "n_returned": 5171,
@@ -89,8 +89,8 @@
       "comparison": {
         "docs_examined_saved": 88611,
         "docs_reduction_pct": 94.49,
-        "execution_time_saved_ms": 201,
-        "time_reduction_pct": 87.39
+        "execution_time_saved_ms": 204,
+        "time_reduction_pct": 85.0
       }
     }
   ]
