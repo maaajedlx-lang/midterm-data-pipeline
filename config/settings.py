@@ -33,7 +33,7 @@ SAMPLE_ROWS = int(os.getenv("SAMPLE_ROWS", "500000"))
 # ============================================================
 
 # Mandatory threshold: <= 200 MB uses python_batch, > 200 MB uses pyspark
-SMALL_FILE_THRESHOLD_MB = float(os.getenv("SMALL_FILE_THRESHOLD_MB", "205.0"))
+SMALL_FILE_THRESHOLD_MB = float(os.getenv("SMALL_FILE_THRESHOLD_MB", "200.0"))
 
 # ============================================================
 # Python Batch Engine Configuration

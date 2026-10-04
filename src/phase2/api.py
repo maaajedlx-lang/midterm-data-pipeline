@@ -131,7 +131,6 @@ def get_health() -> Dict[str, Any]:
         "mongodb": {
             "connected": is_mongo_ok,
             "database": MONGO_DATABASE,
-            "uri": MONGO_URI,
             "collections_count": {
                 "orders_raw": raw_count,
                 "orders_validated": val_count,
@@ -267,20 +266,7 @@ def execute_query(
             parsed_kwargs[k] = v
 
     try:
-        # Provide smart defaults if required fields weren't passed
-        if name == "orders_by_customer" and "customer_id" not in parsed_kwargs:
-            parsed_kwargs["customer_id"] = "عميل-1"
-        elif name == "orders_by_city_status":
-            parsed_kwargs.setdefault("city", "صنعاء")
-            parsed_kwargs.setdefault("payment_status", "مؤكد")
-        elif name == "orders_by_date_range":
-            parsed_kwargs.setdefault("start_date", "2025-01-01T00:00:00")
-            parsed_kwargs.setdefault("end_date", "2025-01-15T23:59:59")
-        elif name == "orders_by_delivery_payment":
-            parsed_kwargs.setdefault("delivery_type", "سريع")
-            parsed_kwargs.setdefault("payment_method", "محفظة إلكترونية")
-
-        res = run_query(name, **parsed_kwargs)
+        # Omitted query filters are inferred from the live validated dataset.\n        res = run_query(name, **parsed_kwargs)
         return res
     except Exception as exc:
         raise HTTPException(

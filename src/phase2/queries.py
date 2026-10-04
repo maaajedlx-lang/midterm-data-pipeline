@@ -175,6 +175,65 @@ QUERIES_REGISTRY: Dict[str, Dict[str, Any]] = {
 }
 
 
+def _live_query_defaults(name: str, coll: Any) -> Dict[str, Any]:
+    """Infer safe defaults from the current validated collection."""
+    defaults: Dict[str, Any] = {}
+
+    if name == "orders_by_customer":
+        doc = coll.find_one(
+            {"customer_id": {"$exists": True, "$nin": [None, ""]}},
+            {"customer_id": 1},
+        )
+        if doc:
+            defaults["customer_id"] = doc["customer_id"]
+
+    elif name == "orders_by_city_status":
+        doc = coll.find_one(
+            {
+                "city": {"$exists": True, "$nin": [None, ""]},
+                "payment_status": {"$exists": True, "$nin": [None, ""]},
+            },
+            {"city": 1, "payment_status": 1},
+        )
+        if doc:
+            defaults["city"] = doc["city"]
+            defaults["payment_status"] = doc["payment_status"]
+
+    elif name == "high_value_orders":
+        doc = coll.find_one(
+            {"total_amount": {"$type": "number"}},
+            {"total_amount": 1},
+            sort=[("total_amount", DESCENDING)],
+        )
+        if doc:
+            defaults["min_amount"] = float(doc["total_amount"])
+
+    elif name == "orders_by_date_range":
+        doc = coll.find_one(
+            {"order_date": {"$type": "string", "$gte": "2000"}},
+            {"order_date": 1},
+            sort=[("order_date", ASCENDING)],
+        )
+        if doc and isinstance(doc.get("order_date"), str):
+            day = doc["order_date"][:10]
+            defaults["start_date"] = f"{day}T00:00:00"
+            defaults["end_date"] = f"{day}T23:59:59"
+
+    elif name == "orders_by_delivery_payment":
+        doc = coll.find_one(
+            {
+                "delivery_type": {"$exists": True, "$nin": [None, ""]},
+                "payment_method": {"$exists": True, "$nin": [None, ""]},
+            },
+            {"delivery_type": 1, "payment_method": 1},
+        )
+        if doc:
+            defaults["delivery_type"] = doc["delivery_type"]
+            defaults["payment_method"] = doc["payment_method"]
+
+    return defaults
+
+
 def list_available_queries() -> List[Dict[str, Any]]:
     """Returns metadata for all available queries."""
     summary = []
@@ -189,25 +248,28 @@ def list_available_queries() -> List[Dict[str, Any]]:
 
 
 def run_query(name: str, **kwargs: Any) -> Dict[str, Any]:
-    """Runs a query dynamically by name with provided arguments."""
+    """Runs a query by name, inferring omitted filters from live data."""
     if name not in QUERIES_REGISTRY:
         raise ValueError(f"Unknown query: '{name}'. Available: {list(QUERIES_REGISTRY.keys())}")
-    
+
     meta = QUERIES_REGISTRY[name]
     fn = meta["function"]
 
-    call_kwargs: Dict[str, Any] = {}
-    for param_name, param_spec in meta.get("parameters", {}).items():
-        if param_name in kwargs:
-            call_kwargs[param_name] = kwargs[param_name]
-        elif "default" in param_spec:
-            call_kwargs[param_name] = param_spec["default"]
-        elif "example" in param_spec:
-            call_kwargs[param_name] = param_spec["example"]
+    db_inst = kwargs.get("db") or get_db()
+    coll = db_inst[VALIDATED_COLLECTION]
+    call_kwargs: Dict[str, Any] = dict(kwargs)
 
-    for k, v in kwargs.items():
-        if k not in call_kwargs:
-            call_kwargs[k] = v
+    # Prefer values discovered from the current dataset.
+    for key, value in _live_query_defaults(name, coll).items():
+        if key not in call_kwargs or call_kwargs[key] in (None, ""):
+            call_kwargs[key] = value
+
+    # Fall back to documented defaults only when no live value exists.
+    for param_name, param_spec in meta.get("parameters", {}).items():
+        if param_name not in call_kwargs and "default" in param_spec:
+            call_kwargs[param_name] = param_spec["default"]
+        elif param_name not in call_kwargs and "example" in param_spec:
+            call_kwargs[param_name] = param_spec["example"]
 
     results = fn(**call_kwargs)
     return {
