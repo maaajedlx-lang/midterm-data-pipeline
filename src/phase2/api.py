@@ -266,7 +266,8 @@ def execute_query(
             parsed_kwargs[k] = v
 
     try:
-        # Omitted query filters are inferred from the live validated dataset.\n        res = run_query(name, **parsed_kwargs)
+        # Omitted query filters are inferred from the live validated dataset.
+        res = run_query(name, **parsed_kwargs)
         return res
     except Exception as exc:
         raise HTTPException(
